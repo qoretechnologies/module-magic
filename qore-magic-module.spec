@@ -67,7 +67,7 @@ make DESTDIR=%{buildroot} install
 %{module_dir}
 
 %check
-qore -l ./magic-api-1.3.qmod test/magic.qtest
+qore -l ./magic-api-*.qmod test/magic.qtest
 
 %package doc
 Summary: Documentation and examples for the Qore magic module

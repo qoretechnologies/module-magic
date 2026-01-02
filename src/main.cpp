@@ -66,12 +66,22 @@ To use the module in a %Qore script, use the \c %%requires directive as in the f
 # import the magic module API
 %requires magic
 
+# Get MIME type only
 Magic m(MAGIC_MIME_TYPE);
-printf("%y\n", m.file("/etc/resolv.conf"));
+printf("MIME type: %y\n", m.file("/etc/hosts"));
+
+# Get MIME type with encoding
+Magic m2(MAGIC_MIME);
+printf("MIME with encoding: %y\n", m2.file("/etc/hosts"));
+
+# Analyze buffer data
+printf("Buffer type: %y\n", m.buffer("Hello, World!"));
 @endcode
 The above command would result in the following output when executed on a standard UNIX or UNIX-like system:
 @verbatim
-"inode/symlink; charset=binary"
+MIME type: "text/plain"
+MIME with encoding: "text/plain; charset=us-ascii"
+Buffer type: "text/plain"
 @endverbatim
 
     @subsection magic_1_0_1 magic Module Version 1.0.1

@@ -84,12 +84,13 @@ Example of use:
 
 @code{.py}
 Magic m(MAGIC_MIME_TYPE);
-printf("%y\n", m.file("/etc/resolv.conf"));
+printf("%y\n", m.file("/etc/hosts"));
+# Output: "text/plain"
+
+Magic m2(MAGIC_MIME);
+printf("%y\n", m2.file("/etc/hosts"));
+# Output: "text/plain; charset=us-ascii"
 @endcode
-Resulting in:
-@verbatim
-"inode/symlink; charset=binary"
-@endverbatim
  */
 qclass Magic [arg=QoreMagic* priv; dom=FILESYSTEM; ns=Qore::Magic];
 
@@ -112,6 +113,13 @@ Magic::constructor(softint flags) {
 */
 Magic::setFlags(softint flags) {
     priv->setFlags(flags, xsink);
+}
+
+//! Returns the current flags/features
+/** @retval int the current flags value
+*/
+int Magic::getFlags() {
+    return priv->getFlags();
 }
 
 //! Returns magic info for a file (path)
