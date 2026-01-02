@@ -47,4 +47,8 @@ chown -R qore:qore ${MODULE_SRC_DIR}
 # run the tests
 export QORE_MODULE_DIR=${MODULE_SRC_DIR}/qlib:${QORE_MODULE_DIR}
 cd ${MODULE_SRC_DIR}
-# ...
+
+echo && echo "-- running tests --"
+su qore -c "qore -l ${MODULE_SRC_DIR}/build/magic-api-*.qmod test/magic.qtest"
+
+echo && echo "-- all tests passed --"

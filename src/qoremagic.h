@@ -4,7 +4,7 @@
 
     Qore Programming Language
 
-    Copyright 2012 - 2018 Qore Technologies, s.r.o.
+    Copyright 2012 - 2022 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -42,6 +42,7 @@ class QoreMagic : public AbstractPrivateData {
         DLLLOCAL QoreMagic(int flags, ExceptionSink *xsink);
 
         DLLLOCAL void setFlags(int flags, ExceptionSink *xsink);
+        DLLLOCAL int getFlags();
 
         DLLLOCAL AbstractQoreNode* file(const QoreStringNode *fileName, ExceptionSink *xsink);
         DLLLOCAL AbstractQoreNode* file(const QoreStringNode *fileName, int flags, ExceptionSink *xsink);

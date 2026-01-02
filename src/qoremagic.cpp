@@ -4,7 +4,7 @@
 
     Qore Programming Language
 
-    Copyright 2012 - 2018 Qore Technologies, s.r.o.
+    Copyright 2012 - 2022 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -30,16 +30,25 @@ class MagicHelper
     magic_t m_magic;
 
 public:
-    MagicHelper(int flags, ExceptionSink *xsink) {
+    MagicHelper(int flags, ExceptionSink *xsink) : m_magic(nullptr) {
         m_magic = magic_open(flags);
-        if (m_magic == NULL)
+        if (m_magic == nullptr) {
+            xsink->raiseException("MAGIC-ERROR", "Failed to initialize libmagic");
+            return;
+        }
+        if (magic_load(m_magic, nullptr) == -1) {
             checkException(xsink);
-	if (magic_load(m_magic, 0) == -1)
-            checkException(xsink);
+        }
     }
 
     ~MagicHelper() {
-        magic_close(m_magic);
+        if (m_magic) {
+            magic_close(m_magic);
+        }
+    }
+
+    bool isValid() const {
+        return m_magic != nullptr;
     }
 
     magic_t* magic() {
@@ -54,8 +63,11 @@ public:
         return magic_buffer(m_magic, data, len);
     }
 
-    bool checkException(ExceptionSink *xsink)
-    {
+    bool checkException(ExceptionSink *xsink) {
+        if (!m_magic) {
+            xsink->raiseException("MAGIC-ERROR", "Magic handle is not initialized");
+            return true;
+        }
         const char *errmsg = magic_error(m_magic);
         if (errmsg) {
             int err = magic_errno(m_magic);
@@ -67,79 +79,89 @@ public:
 };
 
 
-QoreMagic::QoreMagic(ExceptionSink *xsink)
-{
-    m_flags = MAGIC_NONE;
+QoreMagic::QoreMagic(ExceptionSink* xsink) : m_flags(MAGIC_NONE) {
+    (void)xsink;
 }
 
-QoreMagic::QoreMagic(int flags, ExceptionSink *xsink)
-{
-    m_flags = flags;
+QoreMagic::QoreMagic(int flags, ExceptionSink* xsink) : m_flags(flags) {
+    (void)xsink;
 }
 
 QoreMagic::~QoreMagic()
 {
 }
 
-void QoreMagic::setFlags(int flags, ExceptionSink *xsink)
-{
+void QoreMagic::setFlags(int flags, ExceptionSink* xsink) {
+    (void)xsink;
     AutoLocker al(m_lock);
     m_flags = flags;
 }
 
-AbstractQoreNode* QoreMagic::file(const QoreStringNode *fileName, ExceptionSink *xsink)
-{
+int QoreMagic::getFlags() {
+    AutoLocker al(m_lock);
+    return m_flags;
+}
+
+AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, ExceptionSink* xsink) {
     return file(fileName, m_flags, xsink);
 }
 
-AbstractQoreNode* QoreMagic::file(const QoreStringNode *fileName, int flags, ExceptionSink *xsink)
-{
+AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, int flags, ExceptionSink* xsink) {
     AutoLocker al(m_lock);
 
     MagicHelper magic(flags, xsink);
 
-    if (*xsink)
-        return 0;
+    if (*xsink || !magic.isValid()) {
+        return nullptr;
+    }
 
-    const char *ret = magic.file(fileName->getBuffer());
+    const char* ret = magic.file(fileName->getBuffer());
 
-    if (magic.checkException(xsink))
-        return 0;
+    if (!ret) {
+        if (!magic.checkException(xsink)) {
+            xsink->raiseException("MAGIC-ERROR", "Failed to determine file type for '%s'",
+                fileName->c_str());
+        }
+        return nullptr;
+    }
 
     return new QoreStringNode(ret);
 }
 
-AbstractQoreNode* QoreMagic::buffer(QoreValue data, ExceptionSink *xsink)
-{
+AbstractQoreNode* QoreMagic::buffer(QoreValue data, ExceptionSink* xsink) {
     return buffer(data, m_flags, xsink);
 }
 
-AbstractQoreNode* QoreMagic::buffer(QoreValue data, int flags, ExceptionSink *xsink)
-{
+AbstractQoreNode* QoreMagic::buffer(QoreValue data, int flags, ExceptionSink* xsink) {
     AutoLocker al(m_lock);
 
     MagicHelper magic(flags, xsink);
 
-    if (*xsink)
-        return 0;
+    if (*xsink || !magic.isValid()) {
+        return nullptr;
+    }
 
     qore_type_t qt = data.getType();
-    const char *ret;
+    const char* ret;
     if (qt == NT_BINARY) {
         const BinaryNode* s = data.get<const BinaryNode>();
         ret = magic.buffer(s->getPtr(), s->size());
-    }
-    else if (qt == NT_STRING) {
+    } else if (qt == NT_STRING) {
         const QoreStringNode* s = data.get<const QoreStringNode>();
         ret = magic.buffer(s->c_str(), s->size());
-    }
-    else {
-        xsink->raiseException("MAGIC-ERROR", "Magic::buffer requires 'data' argument: string or binary. Got: %s", data.getTypeName());
-        return 0;
+    } else {
+        xsink->raiseException("MAGIC-ERROR",
+            "Magic::buffer requires 'data' argument: string or binary. Got: %s",
+            data.getTypeName());
+        return nullptr;
     }
 
-    if (magic.checkException(xsink))
-        return 0;
+    if (!ret) {
+        if (!magic.checkException(xsink)) {
+            xsink->raiseException("MAGIC-ERROR", "Failed to determine buffer type");
+        }
+        return nullptr;
+    }
 
     return new QoreStringNode(ret);
 }

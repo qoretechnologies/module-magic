@@ -9,19 +9,275 @@
 
 %requires QUnit
 %requires Mime
+%requires Util
 
 %exec-class MagicTest
 
 class MagicTest inherits Test {
+    private {
+        string testDir;
+    }
+
     constructor() : Test("MagicTest", "1.0") {
-        addTestCase("Magic main", \test());
+        testDir = get_script_dir();
+
+        addTestCase("Default constructor", \testDefaultConstructor());
+        addTestCase("Constructor with flags", \testConstructorWithFlags());
+        addTestCase("File detection - MIME type", \testFileMimeType());
+        addTestCase("File detection - MIME with encoding", \testFileMimeWithEncoding());
+        addTestCase("File detection with inline flags", \testFileWithFlags());
+        addTestCase("Buffer detection - string", \testBufferString());
+        addTestCase("Buffer detection - binary", \testBufferBinary());
+        addTestCase("Buffer detection with inline flags", \testBufferWithFlags());
+        addTestCase("setFlags method", \testSetFlags());
+        addTestCase("getFlags method", \testGetFlags());
+        addTestCase("Error handling - non-existent file", \testNonExistentFile());
+        addTestCase("Error handling - empty path", \testEmptyPath());
+        addTestCase("Edge case - empty file", \testEmptyFile());
+        addTestCase("Edge case - empty buffer", \testEmptyBuffer());
+        addTestCase("Flag combinations", \testFlagCombinations());
+        addTestCase("Binary file detection", \testBinaryFiles());
+
         set_return_value(main());
     }
 
-    test() {
+    # Test default constructor creates Magic object with MAGIC_NONE
+    testDefaultConstructor() {
+        Magic m();
+        assertEq(MAGIC_NONE, m.getFlags(), "Default constructor should set MAGIC_NONE");
+
+        # Should still work - returns human-readable description
+        string result = m.file(testDir + "/qore.txt");
+        assertTrue(result.size() > 0, "Default constructor should produce valid output");
+    }
+
+    # Test constructor with flags
+    testConstructorWithFlags() {
         Magic m(MAGIC_MIME_TYPE);
-        assertEq(MimeTypeText, m.file(get_script_dir() + "/qore.txt"));
-        assertEq(MimeTypeJpeg, m.file(get_script_dir() + "/qore.jpg"));
-        assertEq(MimeTypePng, m.file(get_script_dir() + "/qore.png"));
+        assertEq(MAGIC_MIME_TYPE, m.getFlags(), "Constructor should set correct flags");
+
+        Magic m2(MAGIC_MIME);
+        assertEq(MAGIC_MIME, m2.getFlags(), "Constructor should set MAGIC_MIME flags");
+
+        Magic m3(MAGIC_MIME_ENCODING);
+        assertEq(MAGIC_MIME_ENCODING, m3.getFlags(), "Constructor should set MAGIC_MIME_ENCODING flags");
+    }
+
+    # Test basic file MIME type detection
+    testFileMimeType() {
+        Magic m(MAGIC_MIME_TYPE);
+        assertEq(MimeTypeText, m.file(testDir + "/qore.txt"), "Should detect text file");
+        assertEq(MimeTypeJpeg, m.file(testDir + "/qore.jpg"), "Should detect JPEG file");
+        assertEq(MimeTypePng, m.file(testDir + "/qore.png"), "Should detect PNG file");
+    }
+
+    # Test MIME type with encoding (charset)
+    testFileMimeWithEncoding() {
+        Magic m(MAGIC_MIME);
+        string result = m.file(testDir + "/qore.txt");
+        assertTrue(result.regex("^text/plain"), "Should start with text/plain");
+        assertTrue(result.regex("charset="), "Should include charset");
+    }
+
+    # Test file() method with inline flags parameter
+    testFileWithFlags() {
+        Magic m(MAGIC_NONE);
+
+        # Use MAGIC_MIME_TYPE flag inline
+        string mimeResult = m.file(testDir + "/qore.txt", MAGIC_MIME_TYPE);
+        assertEq(MimeTypeText, mimeResult, "Inline MAGIC_MIME_TYPE should work");
+
+        # Use MAGIC_MIME flag inline
+        string mimeFullResult = m.file(testDir + "/qore.txt", MAGIC_MIME);
+        assertTrue(mimeFullResult.regex("charset="), "Inline MAGIC_MIME should include charset");
+
+        # Original object flags should be unchanged
+        assertEq(MAGIC_NONE, m.getFlags(), "Object flags should remain unchanged");
+    }
+
+    # Test buffer detection with string data
+    testBufferString() {
+        Magic m(MAGIC_MIME_TYPE);
+
+        # Plain text
+        assertEq(MimeTypeText, m.buffer("Hello, World!"), "Should detect text string");
+
+        # HTML-like content
+        string htmlResult = m.buffer("<html><body>Test</body></html>");
+        assertTrue(htmlResult == "text/html" || htmlResult == MimeTypeText,
+            "Should detect HTML or text");
+
+        # JSON-like content
+        string jsonResult = m.buffer('{"key": "value"}');
+        assertTrue(jsonResult == "application/json" || jsonResult == MimeTypeText,
+            "Should detect JSON or text");
+    }
+
+    # Test buffer detection with binary data
+    testBufferBinary() {
+        Magic m(MAGIC_MIME_TYPE);
+
+        # Read actual test files as binary and test buffer detection
+        binary pngData = ReadOnlyFile::readBinaryFile(testDir + "/qore.png");
+        string pngResult = m.buffer(pngData);
+        assertEq(MimeTypePng, pngResult, "Should detect PNG from binary buffer");
+
+        binary jpgData = ReadOnlyFile::readBinaryFile(testDir + "/qore.jpg");
+        string jpegResult = m.buffer(jpgData);
+        assertEq(MimeTypeJpeg, jpegResult, "Should detect JPEG from binary buffer");
+
+        # Test with minimal magic bytes - these may return octet-stream on some systems
+        # as the headers alone may not be enough for definitive detection
+        binary pngHeader = <89504E470D0A1A0A>;
+        string pngHeaderResult = m.buffer(pngHeader);
+        assertTrue(pngHeaderResult == MimeTypePng || pngHeaderResult == "application/octet-stream",
+            "Should detect PNG or octet-stream from minimal header");
+
+        # PDF-like content (header string)
+        string pdfResult = m.buffer("%PDF-1.4");
+        assertEq(MimeTypePdf, pdfResult, "Should detect PDF from header string");
+    }
+
+    # Test buffer() with inline flags parameter
+    testBufferWithFlags() {
+        Magic m(MAGIC_NONE);
+
+        # Use MAGIC_MIME_TYPE flag inline
+        string mimeResult = m.buffer("Hello, World!", MAGIC_MIME_TYPE);
+        assertEq(MimeTypeText, mimeResult, "Inline MAGIC_MIME_TYPE should work for buffer");
+
+        # Use MAGIC_MIME flag inline
+        string mimeFullResult = m.buffer("Hello, World!", MAGIC_MIME);
+        assertTrue(mimeFullResult.regex("charset="), "Inline MAGIC_MIME should include charset for buffer");
+
+        # Original object flags should be unchanged
+        assertEq(MAGIC_NONE, m.getFlags(), "Object flags should remain unchanged after buffer()");
+    }
+
+    # Test setFlags method
+    testSetFlags() {
+        Magic m();
+        assertEq(MAGIC_NONE, m.getFlags(), "Initial flags should be MAGIC_NONE");
+
+        m.setFlags(MAGIC_MIME_TYPE);
+        assertEq(MAGIC_MIME_TYPE, m.getFlags(), "setFlags should update flags");
+
+        # Verify the new flags work
+        string result = m.file(testDir + "/qore.txt");
+        assertEq(MimeTypeText, result, "New flags should take effect");
+
+        # Change flags again
+        m.setFlags(MAGIC_MIME);
+        assertEq(MAGIC_MIME, m.getFlags(), "setFlags should update flags again");
+        result = m.file(testDir + "/qore.txt");
+        assertTrue(result.regex("charset="), "Updated flags should take effect");
+    }
+
+    # Test getFlags method
+    testGetFlags() {
+        Magic m(MAGIC_MIME_TYPE);
+        assertEq(MAGIC_MIME_TYPE, m.getFlags(), "getFlags should return correct value");
+
+        m.setFlags(MAGIC_MIME | MAGIC_COMPRESS);
+        int expected = MAGIC_MIME | MAGIC_COMPRESS;
+        assertEq(expected, m.getFlags(), "getFlags should return combined flags");
+    }
+
+    # Test error handling for non-existent file
+    testNonExistentFile() {
+        Magic m(MAGIC_MIME_TYPE);
+
+        # Without MAGIC_ERROR flag, libmagic may return a result or raise an exception
+        # depending on the platform
+        try {
+            m.file("/nonexistent/path/to/file.txt");
+            # Some platforms return an error description instead of throwing
+            assertTrue(True, "Non-existent file handled without crash");
+        } catch (hash<ExceptionInfo> ex) {
+            assertEq("MAGIC-ERROR", ex.err, "Should raise MAGIC-ERROR exception");
+        }
+
+        # With MAGIC_ERROR flag, should definitely raise an exception
+        Magic m2(MAGIC_MIME_TYPE | MAGIC_ERROR);
+        assertThrows("MAGIC-ERROR", \m2.file(), "/nonexistent/path/to/file.txt");
+    }
+
+    # Test error handling for empty path
+    testEmptyPath() {
+        Magic m(MAGIC_MIME_TYPE | MAGIC_ERROR);
+
+        assertThrows("MAGIC-ERROR", \m.file(), "");
+    }
+
+    # Test edge case: empty file
+    testEmptyFile() {
+        # Create a temporary empty file
+        string emptyFile = tmp_location() + "/magic_test_empty_" + string(getpid()) + ".tmp";
+        {
+            File f();
+            f.open(emptyFile, O_CREAT | O_WRONLY | O_TRUNC);
+            f.close();
+        }
+
+        on_exit {
+            unlink(emptyFile);
+        }
+
+        Magic m(MAGIC_MIME_TYPE);
+        string result = m.file(emptyFile);
+        # Empty files are typically detected as "inode/x-empty" or "application/x-empty"
+        assertTrue(result.regex("empty") || result == MimeTypeText || result == "application/octet-stream",
+            "Should handle empty file: got " + result);
+    }
+
+    # Test edge case: empty buffer
+    testEmptyBuffer() {
+        Magic m(MAGIC_MIME_TYPE);
+
+        # Empty string
+        string result1 = m.buffer("");
+        assertTrue(result1.size() > 0, "Should handle empty string buffer");
+
+        # Empty binary
+        binary emptyBin = binary();
+        string result2 = m.buffer(emptyBin);
+        assertTrue(result2.size() > 0, "Should handle empty binary buffer");
+    }
+
+    # Test various flag combinations
+    testFlagCombinations() {
+        # MAGIC_COMPRESS - check inside compressed files
+        Magic m1(MAGIC_MIME_TYPE | MAGIC_COMPRESS);
+        assertTrue(m1.getFlags() == (MAGIC_MIME_TYPE | MAGIC_COMPRESS), "Combined flags should work");
+
+        # MAGIC_SYMLINK - follow symlinks
+        Magic m2(MAGIC_MIME_TYPE | MAGIC_SYMLINK);
+        assertTrue(m2.getFlags() == (MAGIC_MIME_TYPE | MAGIC_SYMLINK), "SYMLINK flag should work");
+
+        # MAGIC_CONTINUE - return all matches
+        Magic m3(MAGIC_MIME_TYPE | MAGIC_CONTINUE);
+        assertTrue(m3.getFlags() == (MAGIC_MIME_TYPE | MAGIC_CONTINUE), "CONTINUE flag should work");
+
+        # Multiple flags
+        int multiFlags = MAGIC_MIME_TYPE | MAGIC_SYMLINK | MAGIC_COMPRESS;
+        Magic m4(multiFlags);
+        assertEq(multiFlags, m4.getFlags(), "Multiple flags should work");
+    }
+
+    # Test binary file detection
+    testBinaryFiles() {
+        Magic m(MAGIC_MIME_TYPE);
+
+        # Test actual binary files in test directory
+        assertEq(MimeTypeJpeg, m.file(testDir + "/qore.jpg"), "Should detect JPEG");
+        assertEq(MimeTypePng, m.file(testDir + "/qore.png"), "Should detect PNG");
+
+        # Test with MAGIC_MIME for full MIME with charset
+        Magic m2(MAGIC_MIME);
+        string jpegResult = m2.file(testDir + "/qore.jpg");
+        assertTrue(jpegResult.regex("^image/jpeg"), "Should start with image/jpeg");
+
+        string pngResult = m2.file(testDir + "/qore.png");
+        assertTrue(pngResult.regex("^image/png"), "Should start with image/png");
     }
 }
