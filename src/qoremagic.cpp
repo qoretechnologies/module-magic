@@ -22,6 +22,7 @@
 */
 
 #include <qore/Qore.h>
+#include <qore/QoreSandboxManager.h>
 #include "qoremagic.h"
 
 
@@ -108,6 +109,12 @@ AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, ExceptionSink*
 
 AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, int flags, ExceptionSink* xsink) {
     AutoLocker al(m_lock);
+
+    // Check filesystem sandbox access before reading file
+    QoreSandboxManager* sm = runtime_get_sandbox_manager();
+    if (sm && !sm->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
+        return nullptr;
+    }
 
     MagicHelper magic(flags, xsink);
 

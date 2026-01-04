@@ -37,6 +37,7 @@ class MagicTest inherits Test {
         addTestCase("Edge case - empty buffer", \testEmptyBuffer());
         addTestCase("Flag combinations", \testFlagCombinations());
         addTestCase("Binary file detection", \testBinaryFiles());
+        addTestCase("Sandbox filesystem tests", \sandboxFilesystemTest());
 
         set_return_value(main());
     }
@@ -279,5 +280,76 @@ class MagicTest inherits Test {
 
         string pngResult = m2.file(testDir + "/qore.png");
         assertTrue(pngResult.regex("^image/png"), "Should start with image/png");
+    }
+
+    # Test filesystem sandbox
+    sandboxFilesystemTest() {
+        # Test that filesystem sandbox blocks file access outside allowed paths
+
+        # Create a test file in /tmp
+        string testFilePath = "/tmp/magic_sandbox_test_" + getpid() + ".txt";
+        {
+            File f();
+            f.open2(testFilePath, O_CREAT | O_WRONLY | O_TRUNC);
+            f.write("This is a test file");
+        }
+        on_exit unlink(testFilePath);
+
+        # Create a sandboxed program with /var as root (so /tmp is outside)
+        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p.loadModule("magic");
+
+        p.parse(sprintf("
+            string sub test_magic_file() {
+                Magic m(MAGIC_MIME_TYPE);
+                return m.file('%s');
+            }
+        ", testFilePath), "sandbox_magic_test");
+
+        SandboxManager sm();
+        sm.setFilesystemSandboxRoot("/var");
+        p.setSandboxManager(sm);
+
+        # Test that Magic::file() is blocked when file is outside sandbox
+        bool caught = False;
+        try {
+            p.callFunction("test_magic_file");
+        } catch (hash<ExceptionInfo> ex) {
+            caught = True;
+            assertEq("FILESYSTEM-ACCESS-DENIED", ex.err, "Magic file access blocked with correct error");
+        }
+        assertTrue(caught, "Magic file access outside sandbox was blocked");
+
+        # Test that buffer detection works with any sandbox (no file access)
+        Program p2(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p2.loadModule("magic");
+
+        p2.parse("
+            string sub test_magic_buffer() {
+                Magic m(MAGIC_MIME_TYPE);
+                return m.buffer('Hello, World!');
+            }
+        ", "sandbox_magic_buffer_test");
+        p2.setSandboxManager(sm);
+
+        string result = p2.callFunction("test_magic_buffer");
+        assertEq("text/plain", result, "Magic buffer detection works with filesystem sandbox");
+
+        # Test that file access works when file is in allowed path
+        SandboxManager sm3();
+        sm3.setFilesystemSandboxRoot("/tmp");
+        Program p3(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        p3.loadModule("magic");
+
+        p3.parse(sprintf("
+            string sub test_allowed_magic() {
+                Magic m(MAGIC_MIME_TYPE);
+                return m.file('%s');
+            }
+        ", testFilePath), "sandbox_allowed_magic_test");
+        p3.setSandboxManager(sm3);
+
+        result = p3.callFunction("test_allowed_magic");
+        assertEq("text/plain", result, "Magic file access inside sandbox works");
     }
 }
