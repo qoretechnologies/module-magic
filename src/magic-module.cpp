@@ -25,31 +25,32 @@
 #include "qoremagic.h"
 
 
-QoreStringNode *magic_module_init();
-void magic_module_ns_init(QoreNamespace *rns, QoreNamespace *qns);
-void magic_module_delete();
+static void magic_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink);
+static void magic_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink);
+static void magic_module_delete();
 
-// qore module symbols
-DLLEXPORT char qore_module_name[] = "magic";
-DLLEXPORT char qore_module_version[] = PACKAGE_VERSION;
-DLLEXPORT char qore_module_description[] = "libmagic wrapper";
-DLLEXPORT char qore_module_author[] = "Petr Vanek";
-DLLEXPORT char qore_module_url[] = "http://qore.org";
-DLLEXPORT int qore_module_api_major = QORE_MODULE_API_MAJOR;
-DLLEXPORT int qore_module_api_minor = QORE_MODULE_API_MINOR;
-DLLEXPORT qore_module_init_t qore_module_init = magic_module_init;
-DLLEXPORT qore_module_ns_init_t qore_module_ns_init = magic_module_ns_init;
-DLLEXPORT qore_module_delete_t qore_module_delete = magic_module_delete;
-DLLEXPORT qore_license_t qore_module_license = QL_LGPL;
+extern "C" DLLEXPORT void magic_qore_module_desc(QoreModuleInfo& mod_info) {
+    mod_info.name = "magic";
+    mod_info.version = PACKAGE_VERSION;
+    mod_info.desc = "libmagic wrapper";
+    mod_info.author = "Petr Vanek";
+    mod_info.url = "http://qore.org";
+    mod_info.api_major = QORE_MODULE_API_MAJOR;
+    mod_info.api_minor = QORE_MODULE_API_MINOR;
+    mod_info.init = magic_module_init;
+    mod_info.ns_init = magic_module_ns_init;
+    mod_info.del = magic_module_delete;
+    mod_info.license = QL_LGPL;
+    mod_info.license_str = "LGPL";
+}
 
 static QoreNamespace MNS("Qore::Magic");
 
-QoreStringNode* magic_module_init() {
+static void magic_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
     MNS.addSystemClass(initMagicClass(MNS));
-    return 0;
 }
 
-void magic_module_ns_init(QoreNamespace* rns, QoreNamespace* qns) {
+static void magic_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink) {
     qns->addInitialNamespace(MNS.copy());
 }
 
