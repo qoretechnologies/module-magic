@@ -111,8 +111,8 @@ AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, int flags, Exc
     AutoLocker al(m_lock);
 
     // Check filesystem sandbox access before reading file
-    QoreSandboxManager* sm = runtime_get_sandbox_manager();
-    if (sm && !sm->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
+    QoreSandboxManagerHelper smh;
+    if (smh && !smh->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }
 
