@@ -4,7 +4,7 @@
 
   Qore Programming Language
 
-  Copyright 2012 - 2022 Qore Technologies, s.r.o.
+  Copyright 2012 - 2026 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -47,14 +47,19 @@ extern "C" DLLEXPORT void magic_qore_module_desc(QoreModuleInfo& mod_info) {
 static QoreNamespace MNS("Qore::Magic");
 
 static void magic_module_init(QoreModuleInitContext& ctx, ExceptionSink& xsink) {
+    (void)ctx;
+    (void)xsink;
+    hashdeclMagicFileInfo = init_hashdecl_MagicFileInfo(MNS);
     MNS.addSystemClass(initMagicClass(MNS));
+    init_magic_functions(MNS);
 }
 
 static void magic_module_ns_init(QoreNamespace* rns, QoreNamespace* qns, ExceptionSink& xsink) {
+    (void)rns;
+    (void)xsink;
     qns->addInitialNamespace(MNS.copy());
 }
 
 void magic_module_delete() {
     // nothing to do here in this case
 }
-

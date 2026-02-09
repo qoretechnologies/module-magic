@@ -4,7 +4,7 @@
 
     Qore Programming Language
 
-    Copyright 2012 - 2022 Qore Technologies, s.r.o.
+    Copyright 2012 - 2026 Qore Technologies, s.r.o.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -77,6 +77,22 @@ const MAGIC_NO_CHECK_ENCODING = 0x200000;
 //! No built-in tests only consult the magic file
 const MAGIC_NO_CHECK_BUILTIN  = 0x3fb000;
 ///@}
+
+//! Structured file information returned by @ref Magic::fileInfo() "Magic::fileInfo()", @ref Magic::bufferInfo() "Magic::bufferInfo()", and convenience functions
+/** @since magic 2.0
+*/
+hashdecl MagicFileInfo {
+    //! Human-readable description (e.g. "PNG image data, 800 x 600, 8-bit/color RGBA")
+    string description;
+    //! MIME type (e.g. "image/png")
+    string mime_type;
+    //! MIME encoding (e.g. "binary", "us-ascii", "utf-8")
+    string mime_encoding;
+    //! True if mime_type starts with "text/"
+    bool is_text;
+    //! Type category (e.g. "image", "text", "application")
+    string type_category;
+}
 
 //! A low level wrapper around libmagic
 /**
@@ -154,4 +170,40 @@ string Magic::buffer(data data) [dom=FILESYSTEM] {
 */
 string Magic::buffer(data data, softint flags) [dom=FILESYSTEM] {
     return priv->buffer(data, flags, xsink);
+}
+
+//! Returns structured file information including MIME type, encoding, and description
+/** @param fileName a path to file to be examined
+
+    @return a @ref MagicFileInfo hash with all file information
+
+    @par Example:
+    @code{.py}
+Magic m();
+hash<MagicFileInfo> info = m.fileInfo("/etc/hosts");
+printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encoding, info.is_text);
+    @endcode
+
+    @since magic 2.0
+*/
+hash<MagicFileInfo> Magic::fileInfo(softstring fileName) [dom=FILESYSTEM] {
+    return priv->fileInfo(fileName, xsink);
+}
+
+//! Returns structured buffer information including MIME type, encoding, and description
+/** @param data a data buffer to be examined
+
+    @return a @ref MagicFileInfo hash with all buffer information
+
+    @par Example:
+    @code{.py}
+Magic m();
+hash<MagicFileInfo> info = m.bufferInfo("Hello, World!");
+printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encoding, info.is_text);
+    @endcode
+
+    @since magic 2.0
+*/
+hash<MagicFileInfo> Magic::bufferInfo(data data) [dom=FILESYSTEM] {
+    return priv->bufferInfo(data, xsink);
 }

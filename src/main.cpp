@@ -4,7 +4,7 @@
 
   Qore Programming Language
 
-  Copyright 2012 - 2022 Qore Technologies, s.r.o.
+  Copyright 2012 - 2026 Qore Technologies, s.r.o.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -34,6 +34,15 @@ regardless of how the %Qore library was initialized).
 
 This module provides the following class:
 - @ref Qore::Magic::Magic "Magic"
+
+The following hashdecl:
+- @ref Qore::Magic::MagicFileInfo "MagicFileInfo"
+
+And the following convenience functions:
+- @ref Qore::Magic::magic_file_info() "magic_file_info()"
+- @ref Qore::Magic::magic_mime_type() "magic_mime_type()"
+- @ref Qore::Magic::magic_buffer_info() "magic_buffer_info()"
+- @ref Qore::Magic::magic_buffer_mime_type() "magic_buffer_mime_type()"
 
 The <i>Single Unix Specification (SUS)</i> specifies that a series of tests are
 performed on the file specified on the command line:
@@ -83,6 +92,37 @@ MIME type: "text/plain"
 MIME with encoding: "text/plain; charset=us-ascii"
 Buffer type: "text/plain"
 @endverbatim
+
+@section magic_structured_info Structured File Information
+
+Since version 2.0, the module provides structured file information through the @ref Qore::Magic::MagicFileInfo
+"MagicFileInfo" hashdecl. This allows getting MIME type, encoding, and description in a single call:
+
+@code{.py}
+%requires magic
+
+# Using the Magic class
+Magic m();
+hash<MagicFileInfo> info = m.fileInfo("/etc/hosts");
+printf("Description: %s\n", info.description);
+printf("MIME type: %s\n", info.mime_type);
+printf("Encoding: %s\n", info.mime_encoding);
+printf("Is text: %y\n", info.is_text);
+printf("Category: %s\n", info.type_category);
+
+# Using convenience functions (no Magic object needed)
+hash<MagicFileInfo> info2 = magic_file_info("/etc/hosts");
+string mime = magic_mime_type("/etc/hosts");
+
+# Buffer analysis
+hash<MagicFileInfo> buf_info = magic_buffer_info("Hello, World!");
+string buf_mime = magic_buffer_mime_type("<html><body>Test</body></html>");
+@endcode
+
+    @subsection magic_2_0_0 magic Module Version 2.0.0
+    - added @ref Qore::Magic::MagicFileInfo "MagicFileInfo" hashdecl for structured file type information
+    - added @ref Qore::Magic::Magic::fileInfo() "Magic::fileInfo()" and @ref Qore::Magic::Magic::bufferInfo() "Magic::bufferInfo()" methods
+    - added convenience functions: @ref Qore::Magic::magic_file_info() "magic_file_info()", @ref Qore::Magic::magic_mime_type() "magic_mime_type()", @ref Qore::Magic::magic_buffer_info() "magic_buffer_info()", @ref Qore::Magic::magic_buffer_mime_type() "magic_buffer_mime_type()"
 
     @subsection magic_1_0_1 magic Module Version 1.0.1
     - aligned release with qpp from %Qore

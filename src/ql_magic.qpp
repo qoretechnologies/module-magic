@@ -1,0 +1,115 @@
+/* -*- mode: c++; indent-tabs-mode: nil -*- */
+/** @file
+    @brief defines magic convenience functions
+*/
+/*
+    ql_magic.qpp
+
+    Qore Programming Language - magic module convenience functions
+
+    Copyright 2012 - 2026 Qore Technologies, s.r.o.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include <qore/Qore.h>
+#include "qoremagic.h"
+
+/** @defgroup magic_functions Magic Convenience Functions
+    These functions provide a simple way to get file type information without creating a @ref Magic object.
+
+    @since magic 2.0
+*/
+///@{
+namespace Qore::Magic;
+
+//! Returns structured file information including MIME type, encoding, and description
+/** @par Example:
+    @code{.py}
+hash<MagicFileInfo> info = magic_file_info("/etc/hosts");
+printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encoding, info.is_text);
+    @endcode
+
+    @param fileName a path to the file to be examined
+
+    @return a @ref MagicFileInfo hash with comprehensive file type information
+
+    @throw MAGIC-ERROR if the file cannot be analyzed
+    @throw FILESYSTEM-ACCESS-DENIED if filesystem sandbox restrictions prevent access
+
+    @since magic 2.0
+*/
+hash<MagicFileInfo> magic_file_info(string fileName) [dom=FILESYSTEM] {
+    return magic_file_info_impl(fileName, xsink);
+}
+
+//! Returns the MIME type of a file as a string
+/** @par Example:
+    @code{.py}
+string mime = magic_mime_type("/etc/hosts");
+# mime = "text/plain"
+    @endcode
+
+    @param fileName a path to the file to be examined
+
+    @return the MIME type string (e.g. "text/plain", "image/png")
+
+    @throw MAGIC-ERROR if the file cannot be analyzed
+    @throw FILESYSTEM-ACCESS-DENIED if filesystem sandbox restrictions prevent access
+
+    @since magic 2.0
+*/
+string magic_mime_type(string fileName) [dom=FILESYSTEM] {
+    return magic_mime_type_impl(fileName, xsink);
+}
+
+//! Returns structured information for a data buffer including MIME type, encoding, and description
+/** @par Example:
+    @code{.py}
+hash<MagicFileInfo> info = magic_buffer_info("Hello, World!");
+printf("MIME: %s, is_text: %y\n", info.mime_type, info.is_text);
+    @endcode
+
+    @param data a string or binary buffer to be examined
+
+    @return a @ref MagicFileInfo hash with comprehensive type information
+
+    @throw MAGIC-ERROR if the buffer cannot be analyzed
+
+    @since magic 2.0
+*/
+hash<MagicFileInfo> magic_buffer_info(data data) [dom=FILESYSTEM] {
+    return magic_buffer_info_impl(data, xsink);
+}
+
+//! Returns the MIME type of a data buffer as a string
+/** @par Example:
+    @code{.py}
+string mime = magic_buffer_mime_type("Hello, World!");
+# mime = "text/plain"
+    @endcode
+
+    @param data a string or binary buffer to be examined
+
+    @return the MIME type string (e.g. "text/plain", "application/octet-stream")
+
+    @throw MAGIC-ERROR if the buffer cannot be analyzed
+
+    @since magic 2.0
+*/
+string magic_buffer_mime_type(data data) [dom=FILESYSTEM] {
+    return magic_buffer_mime_type_impl(data, xsink);
+}
+///@}

@@ -35,6 +35,25 @@ class MagicTest inherits Test {
         addTestCase("Flag combinations", \testFlagCombinations());
         addTestCase("Binary file detection", \testBinaryFiles());
         addTestCase("Sandbox filesystem tests", \sandboxFilesystemTest());
+        addTestCase("fileInfo - text file", \testFileInfoText());
+        addTestCase("fileInfo - PNG file", \testFileInfoPng());
+        addTestCase("fileInfo - JPEG file", \testFileInfoJpeg());
+        addTestCase("bufferInfo - text", \testBufferInfoText());
+        addTestCase("bufferInfo - PNG binary", \testBufferInfoPng());
+        addTestCase("bufferInfo - JPEG binary", \testBufferInfoJpeg());
+        addTestCase("bufferInfo - PDF header", \testBufferInfoPdf());
+        addTestCase("magic_file_info function", \testMagicFileInfoFunction());
+        addTestCase("magic_mime_type function", \testMagicMimeTypeFunction());
+        addTestCase("magic_buffer_info function", \testMagicBufferInfoFunction());
+        addTestCase("magic_buffer_mime_type function", \testMagicBufferMimeTypeFunction());
+        addTestCase("fileInfo error handling", \testFileInfoErrorHandling());
+        addTestCase("bufferInfo edge cases", \testBufferInfoEdgeCases());
+        addTestCase("fileInfo sandbox", \testFileInfoSandbox());
+        addTestCase("Convenience functions sandbox", \testConvenienceFunctionsSandbox());
+        addTestCase("Negative type tests - buffer/bufferInfo", \testNegativeTypeBuffer());
+        addTestCase("I/O interrupt - file operations", \testIOInterruptFile());
+        addTestCase("I/O interrupt - buffer operations", \testIOInterruptBuffer());
+        addTestCase("I/O interrupt - convenience functions", \testIOInterruptConvenience());
 
         set_return_value(main());
     }
@@ -188,9 +207,9 @@ class MagicTest inherits Test {
         # Without MAGIC_ERROR flag, libmagic may return a result or raise an exception
         # depending on the platform
         try {
-            m.file("/nonexistent/path/to/file.txt");
+            string result = m.file("/nonexistent/path/to/file.txt");
             # Some platforms return an error description instead of throwing
-            assertTrue(True, "Non-existent file handled without crash");
+            assertTrue(result.size() > 0, "Non-existent file returned non-empty result");
         } catch (hash<ExceptionInfo> ex) {
             assertEq("MAGIC-ERROR", ex.err, "Should raise MAGIC-ERROR exception");
         }
@@ -293,7 +312,7 @@ class MagicTest inherits Test {
         on_exit unlink(testFilePath);
 
         # Create a sandboxed program with /var as root (so /tmp is outside)
-        Program p(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        Program p(PO_MODERN);
         p.loadModule("magic");
 
         p.parse(sprintf("
@@ -318,7 +337,7 @@ class MagicTest inherits Test {
         assertTrue(caught, "Magic file access outside sandbox was blocked");
 
         # Test that buffer detection works with any sandbox (no file access)
-        Program p2(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        Program p2(PO_MODERN);
         p2.loadModule("magic");
 
         p2.parse("
@@ -335,7 +354,7 @@ class MagicTest inherits Test {
         # Test that file access works when file is in allowed path
         SandboxManager sm3();
         sm3.setFilesystemSandboxRoot("/tmp");
-        Program p3(PO_NEW_STYLE | PO_STRICT_ARGS | PO_REQUIRE_TYPES);
+        Program p3(PO_MODERN);
         p3.loadModule("magic");
 
         p3.parse(sprintf("
@@ -348,5 +367,546 @@ class MagicTest inherits Test {
 
         result = p3.callFunction("test_allowed_magic");
         assertEq("text/plain", result, "Magic file access inside sandbox works");
+    }
+
+    # Test fileInfo() for text file
+    testFileInfoText() {
+        Magic m();
+        hash<MagicFileInfo> info = m.fileInfo(testDir + "/qore.txt");
+
+        assertEq("text/plain", info.mime_type, "fileInfo text MIME type");
+        assertTrue(info.mime_encoding.size() > 0, "fileInfo text encoding not empty");
+        assertTrue(info.description.size() > 0, "fileInfo text description not empty");
+        assertTrue(info.is_text, "fileInfo text is_text should be True");
+        assertEq("text", info.type_category, "fileInfo text type_category");
+    }
+
+    # Test fileInfo() for PNG file
+    testFileInfoPng() {
+        Magic m();
+        hash<MagicFileInfo> info = m.fileInfo(testDir + "/qore.png");
+
+        assertEq("image/png", info.mime_type, "fileInfo PNG MIME type");
+        assertEq("binary", info.mime_encoding, "fileInfo PNG encoding");
+        assertTrue(info.description.size() > 0, "fileInfo PNG description not empty");
+        assertFalse(info.is_text, "fileInfo PNG is_text should be False");
+        assertEq("image", info.type_category, "fileInfo PNG type_category");
+    }
+
+    # Test fileInfo() for JPEG file
+    testFileInfoJpeg() {
+        Magic m();
+        hash<MagicFileInfo> info = m.fileInfo(testDir + "/qore.jpg");
+
+        assertEq("image/jpeg", info.mime_type, "fileInfo JPEG MIME type");
+        assertEq("binary", info.mime_encoding, "fileInfo JPEG encoding");
+        assertTrue(info.description.size() > 0, "fileInfo JPEG description not empty");
+        assertFalse(info.is_text, "fileInfo JPEG is_text should be False");
+        assertEq("image", info.type_category, "fileInfo JPEG type_category");
+    }
+
+    # Test bufferInfo() for text string
+    testBufferInfoText() {
+        Magic m();
+        hash<MagicFileInfo> info = m.bufferInfo("Hello, World!");
+
+        assertEq("text/plain", info.mime_type, "bufferInfo text MIME type");
+        assertTrue(info.mime_encoding.size() > 0, "bufferInfo text encoding not empty");
+        assertTrue(info.description.size() > 0, "bufferInfo text description not empty");
+        assertTrue(info.is_text, "bufferInfo text is_text should be True");
+        assertEq("text", info.type_category, "bufferInfo text type_category");
+    }
+
+    # Test bufferInfo() for PNG binary data
+    testBufferInfoPng() {
+        Magic m();
+        binary pngData = ReadOnlyFile::readBinaryFile(testDir + "/qore.png");
+        hash<MagicFileInfo> info = m.bufferInfo(pngData);
+
+        assertEq("image/png", info.mime_type, "bufferInfo PNG MIME type");
+        assertEq("binary", info.mime_encoding, "bufferInfo PNG encoding");
+        assertTrue(info.description.size() > 0, "bufferInfo PNG description not empty");
+        assertFalse(info.is_text, "bufferInfo PNG is_text should be False");
+        assertEq("image", info.type_category, "bufferInfo PNG type_category");
+    }
+
+    # Test bufferInfo() for JPEG binary data
+    testBufferInfoJpeg() {
+        Magic m();
+        binary jpgData = ReadOnlyFile::readBinaryFile(testDir + "/qore.jpg");
+        hash<MagicFileInfo> info = m.bufferInfo(jpgData);
+
+        assertEq("image/jpeg", info.mime_type, "bufferInfo JPEG MIME type");
+        assertEq("binary", info.mime_encoding, "bufferInfo JPEG encoding");
+        assertTrue(info.description.size() > 0, "bufferInfo JPEG description not empty");
+        assertFalse(info.is_text, "bufferInfo JPEG is_text should be False");
+        assertEq("image", info.type_category, "bufferInfo JPEG type_category");
+    }
+
+    # Test bufferInfo() for PDF header string
+    testBufferInfoPdf() {
+        Magic m();
+        hash<MagicFileInfo> info = m.bufferInfo("%PDF-1.4");
+
+        assertEq("application/pdf", info.mime_type, "bufferInfo PDF MIME type");
+        assertTrue(info.description.size() > 0, "bufferInfo PDF description not empty");
+        assertFalse(info.is_text, "bufferInfo PDF is_text should be False");
+        assertEq("application", info.type_category, "bufferInfo PDF type_category");
+    }
+
+    # Test magic_file_info() convenience function
+    testMagicFileInfoFunction() {
+        hash<MagicFileInfo> textInfo = magic_file_info(testDir + "/qore.txt");
+        assertEq("text/plain", textInfo.mime_type, "magic_file_info text MIME type");
+        assertTrue(textInfo.is_text, "magic_file_info text is_text");
+        assertEq("text", textInfo.type_category, "magic_file_info text type_category");
+
+        hash<MagicFileInfo> pngInfo = magic_file_info(testDir + "/qore.png");
+        assertEq("image/png", pngInfo.mime_type, "magic_file_info PNG MIME type");
+        assertFalse(pngInfo.is_text, "magic_file_info PNG is_text");
+        assertEq("image", pngInfo.type_category, "magic_file_info PNG type_category");
+
+        hash<MagicFileInfo> jpgInfo = magic_file_info(testDir + "/qore.jpg");
+        assertEq("image/jpeg", jpgInfo.mime_type, "magic_file_info JPEG MIME type");
+        assertFalse(jpgInfo.is_text, "magic_file_info JPEG is_text");
+        assertEq("image", jpgInfo.type_category, "magic_file_info JPEG type_category");
+    }
+
+    # Test magic_mime_type() convenience function
+    testMagicMimeTypeFunction() {
+        assertEq("text/plain", magic_mime_type(testDir + "/qore.txt"), "magic_mime_type text");
+        assertEq("image/png", magic_mime_type(testDir + "/qore.png"), "magic_mime_type PNG");
+        assertEq("image/jpeg", magic_mime_type(testDir + "/qore.jpg"), "magic_mime_type JPEG");
+    }
+
+    # Test magic_buffer_info() convenience function
+    testMagicBufferInfoFunction() {
+        hash<MagicFileInfo> textInfo = magic_buffer_info("Hello, World!");
+        assertEq("text/plain", textInfo.mime_type, "magic_buffer_info text MIME type");
+        assertTrue(textInfo.is_text, "magic_buffer_info text is_text");
+        assertEq("text", textInfo.type_category, "magic_buffer_info text type_category");
+
+        binary pngData = ReadOnlyFile::readBinaryFile(testDir + "/qore.png");
+        hash<MagicFileInfo> pngInfo = magic_buffer_info(pngData);
+        assertEq("image/png", pngInfo.mime_type, "magic_buffer_info PNG MIME type");
+        assertFalse(pngInfo.is_text, "magic_buffer_info PNG is_text");
+        assertEq("image", pngInfo.type_category, "magic_buffer_info PNG type_category");
+    }
+
+    # Test magic_buffer_mime_type() convenience function
+    testMagicBufferMimeTypeFunction() {
+        assertEq("text/plain", magic_buffer_mime_type("Hello, World!"), "magic_buffer_mime_type text");
+
+        binary pngData = ReadOnlyFile::readBinaryFile(testDir + "/qore.png");
+        assertEq("image/png", magic_buffer_mime_type(pngData), "magic_buffer_mime_type PNG");
+
+        binary jpgData = ReadOnlyFile::readBinaryFile(testDir + "/qore.jpg");
+        assertEq("image/jpeg", magic_buffer_mime_type(jpgData), "magic_buffer_mime_type JPEG");
+
+        assertEq("application/pdf", magic_buffer_mime_type("%PDF-1.4"), "magic_buffer_mime_type PDF");
+    }
+
+    # Test fileInfo error handling
+    testFileInfoErrorHandling() {
+        Magic m();
+
+        # Non-existent file with MAGIC_ERROR - fileInfo always uses MAGIC_NONE and MAGIC_MIME internally
+        # but still checks filesystem access
+        assertThrows("MAGIC-ERROR", \m.fileInfo(), "/nonexistent/path/to/file.txt");
+
+        # Also test the convenience function
+        assertThrows("MAGIC-ERROR", \magic_file_info(), "/nonexistent/path/to/file.txt");
+
+        # Empty file edge case
+        string emptyFile = tmp_location() + "/magic_test_empty_info_" + string(getpid()) + ".tmp";
+        {
+            File f();
+            f.open(emptyFile, O_CREAT | O_WRONLY | O_TRUNC);
+            f.close();
+        }
+        on_exit unlink(emptyFile);
+
+        hash<MagicFileInfo> info = m.fileInfo(emptyFile);
+        assertTrue(info.mime_type.size() > 0, "fileInfo empty file should have MIME type");
+        assertTrue(info.description.size() > 0, "fileInfo empty file should have description");
+    }
+
+    # Test bufferInfo edge cases
+    testBufferInfoEdgeCases() {
+        Magic m();
+
+        # Empty string buffer
+        hash<MagicFileInfo> emptyStrInfo = m.bufferInfo("");
+        assertTrue(emptyStrInfo.mime_type.size() > 0, "bufferInfo empty string should have MIME type");
+        assertTrue(emptyStrInfo.description.size() > 0, "bufferInfo empty string should have description");
+
+        # Empty binary buffer
+        hash<MagicFileInfo> emptyBinInfo = m.bufferInfo(binary());
+        assertTrue(emptyBinInfo.mime_type.size() > 0, "bufferInfo empty binary should have MIME type");
+        assertTrue(emptyBinInfo.description.size() > 0, "bufferInfo empty binary should have description");
+
+        # Also test convenience function with empty data
+        hash<MagicFileInfo> emptyFuncInfo = magic_buffer_info("");
+        assertTrue(emptyFuncInfo.mime_type.size() > 0, "magic_buffer_info empty string should have MIME type");
+    }
+
+    # Test fileInfo() respects filesystem sandbox
+    testFileInfoSandbox() {
+        # Create a test file in /tmp
+        string testFilePath = "/tmp/magic_fileinfo_sandbox_test_" + getpid() + ".txt";
+        {
+            File f();
+            f.open2(testFilePath, O_CREAT | O_WRONLY | O_TRUNC);
+            f.write("This is a test file for fileInfo sandbox");
+        }
+        on_exit unlink(testFilePath);
+
+        # Create a sandboxed program with /var as root (so /tmp is outside)
+        Program p(PO_MODERN);
+        p.loadModule("magic");
+
+        p.parse(sprintf("
+            hash<MagicFileInfo> sub test_fileinfo() {
+                Magic m();
+                return m.fileInfo('%s');
+            }
+        ", testFilePath), "sandbox_fileinfo_test");
+
+        SandboxManager sm();
+        sm.setFilesystemSandboxRoot("/var");
+        p.setSandboxManager(sm);
+
+        # Test that Magic::fileInfo() is blocked when file is outside sandbox
+        bool caught = False;
+        try {
+            p.callFunction("test_fileinfo");
+        } catch (hash<ExceptionInfo> ex) {
+            caught = True;
+            assertEq("FILESYSTEM-ACCESS-DENIED", ex.err, "fileInfo access blocked with correct error");
+        }
+        assertTrue(caught, "fileInfo outside sandbox was blocked");
+
+        # Test that bufferInfo() works with any sandbox
+        Program p2(PO_MODERN);
+        p2.loadModule("magic");
+
+        p2.parse("
+            hash<MagicFileInfo> sub test_bufferinfo() {
+                Magic m();
+                return m.bufferInfo('Hello, World!');
+            }
+        ", "sandbox_bufferinfo_test");
+        p2.setSandboxManager(sm);
+
+        hash<MagicFileInfo> result = p2.callFunction("test_bufferinfo");
+        assertEq("text/plain", result.mime_type, "bufferInfo works with filesystem sandbox");
+
+        # Test that fileInfo works when file is in allowed path
+        SandboxManager sm3();
+        sm3.setFilesystemSandboxRoot("/tmp");
+        Program p3(PO_MODERN);
+        p3.loadModule("magic");
+
+        p3.parse(sprintf("
+            hash<MagicFileInfo> sub test_allowed_fileinfo() {
+                Magic m();
+                return m.fileInfo('%s');
+            }
+        ", testFilePath), "sandbox_allowed_fileinfo_test");
+        p3.setSandboxManager(sm3);
+
+        hash<MagicFileInfo> allowed = p3.callFunction("test_allowed_fileinfo");
+        assertEq("text/plain", allowed.mime_type, "fileInfo inside sandbox works");
+    }
+
+    # Test convenience functions respect filesystem sandbox
+    testConvenienceFunctionsSandbox() {
+        # Create a test file in /tmp
+        string testFilePath = "/tmp/magic_func_sandbox_test_" + getpid() + ".txt";
+        {
+            File f();
+            f.open2(testFilePath, O_CREAT | O_WRONLY | O_TRUNC);
+            f.write("This is a test file for function sandbox");
+        }
+        on_exit unlink(testFilePath);
+
+        SandboxManager sm();
+        sm.setFilesystemSandboxRoot("/var");
+
+        # Test magic_file_info() is blocked
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                hash<MagicFileInfo> sub test_func_file_info() {
+                    return magic_file_info('%s');
+                }
+            ", testFilePath), "sandbox_func_file_info_test");
+            p.setSandboxManager(sm);
+
+            bool caught = False;
+            try {
+                p.callFunction("test_func_file_info");
+            } catch (hash<ExceptionInfo> ex) {
+                caught = True;
+                assertEq("FILESYSTEM-ACCESS-DENIED", ex.err,
+                    "magic_file_info access blocked with correct error");
+            }
+            assertTrue(caught, "magic_file_info outside sandbox was blocked");
+        }
+
+        # Test magic_mime_type() is blocked
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                string sub test_func_mime_type() {
+                    return magic_mime_type('%s');
+                }
+            ", testFilePath), "sandbox_func_mime_type_test");
+            p.setSandboxManager(sm);
+
+            bool caught = False;
+            try {
+                p.callFunction("test_func_mime_type");
+            } catch (hash<ExceptionInfo> ex) {
+                caught = True;
+                assertEq("FILESYSTEM-ACCESS-DENIED", ex.err,
+                    "magic_mime_type access blocked with correct error");
+            }
+            assertTrue(caught, "magic_mime_type outside sandbox was blocked");
+        }
+
+        # Test buffer functions work with sandbox (no file access needed)
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                hash<MagicFileInfo> sub test_func_buffer_info() {
+                    return magic_buffer_info('Hello, World!');
+                }
+            ", "sandbox_func_buffer_info_test");
+            p.setSandboxManager(sm);
+
+            hash<MagicFileInfo> result = p.callFunction("test_func_buffer_info");
+            assertEq("text/plain", result.mime_type, "magic_buffer_info works with sandbox");
+        }
+
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                string sub test_func_buffer_mime_type() {
+                    return magic_buffer_mime_type('Hello, World!');
+                }
+            ", "sandbox_func_buffer_mime_type_test");
+            p.setSandboxManager(sm);
+
+            string result = p.callFunction("test_func_buffer_mime_type");
+            assertEq("text/plain", result, "magic_buffer_mime_type works with sandbox");
+        }
+    }
+
+    # Test that passing invalid types to buffer/bufferInfo raises parse-time type errors
+    testNegativeTypeBuffer() {
+        # With %modern (PO_MODERN), the data type only accepts string|binary.
+        # Passing an int should raise a parse-time type error.
+
+        # Test Magic::buffer() with wrong type
+        assertThrows("PARSE-TYPE-ERROR", sub() {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                string sub test_buffer_int() {
+                    Magic m(MAGIC_MIME_TYPE);
+                    return m.buffer(42);
+                }
+            ", "neg_buffer_int_test");
+        });
+
+        # Test Magic::bufferInfo() with wrong type
+        assertThrows("PARSE-TYPE-ERROR", sub() {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                hash<MagicFileInfo> sub test_bufferinfo_int() {
+                    Magic m();
+                    return m.bufferInfo(42);
+                }
+            ", "neg_bufferinfo_int_test");
+        });
+
+        # Test magic_buffer_info() with wrong type
+        assertThrows("PARSE-TYPE-ERROR", sub() {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                hash<MagicFileInfo> sub test_func_buffer_info_int() {
+                    return magic_buffer_info(42);
+                }
+            ", "neg_func_buffer_info_int_test");
+        });
+
+        # Test magic_buffer_mime_type() with wrong type
+        assertThrows("PARSE-TYPE-ERROR", sub() {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                string sub test_func_buffer_mime_type_int() {
+                    return magic_buffer_mime_type(42);
+                }
+            ", "neg_func_buffer_mime_type_int_test");
+        });
+    }
+
+    # Test I/O interrupt for file operations (pre-requested interrupt)
+    testIOInterruptFile() {
+        # Create a test file
+        string testFilePath = "/tmp/magic_interrupt_test_" + getpid() + ".txt";
+        {
+            File f();
+            f.open2(testFilePath, O_CREAT | O_WRONLY | O_TRUNC);
+            f.write("test interrupt data");
+        }
+        on_exit unlink(testFilePath);
+
+        SandboxManager sm();
+        sm.requestInterrupt();
+
+        # Test Magic::file() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                string sub test_file() {
+                    Magic m(MAGIC_MIME_TYPE);
+                    return m.file('%s');
+                }
+            ", testFilePath), "interrupt_file_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_file");
+        }
+
+        # Test Magic::fileInfo() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                hash<MagicFileInfo> sub test_fileinfo() {
+                    Magic m();
+                    return m.fileInfo('%s');
+                }
+            ", testFilePath), "interrupt_fileinfo_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_fileinfo");
+        }
+    }
+
+    # Test I/O interrupt for buffer operations (pre-requested interrupt)
+    testIOInterruptBuffer() {
+        SandboxManager sm();
+        sm.requestInterrupt();
+
+        # Test Magic::buffer() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                string sub test_buffer() {
+                    Magic m(MAGIC_MIME_TYPE);
+                    return m.buffer('Hello, World!');
+                }
+            ", "interrupt_buffer_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_buffer");
+        }
+
+        # Test Magic::bufferInfo() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                hash<MagicFileInfo> sub test_bufferinfo() {
+                    Magic m();
+                    return m.bufferInfo('Hello, World!');
+                }
+            ", "interrupt_bufferinfo_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_bufferinfo");
+        }
+    }
+
+    # Test I/O interrupt for convenience functions (pre-requested interrupt)
+    testIOInterruptConvenience() {
+        string testFilePath = "/tmp/magic_interrupt_conv_test_" + getpid() + ".txt";
+        {
+            File f();
+            f.open2(testFilePath, O_CREAT | O_WRONLY | O_TRUNC);
+            f.write("test interrupt data");
+        }
+        on_exit unlink(testFilePath);
+
+        SandboxManager sm();
+        sm.requestInterrupt();
+
+        # Test magic_file_info() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                hash<MagicFileInfo> sub test_func() {
+                    return magic_file_info('%s');
+                }
+            ", testFilePath), "interrupt_func_file_info_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_func");
+        }
+
+        # Test magic_mime_type() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse(sprintf("
+                string sub test_func() {
+                    return magic_mime_type('%s');
+                }
+            ", testFilePath), "interrupt_func_mime_type_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_func");
+        }
+
+        # Test magic_buffer_info() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                hash<MagicFileInfo> sub test_func() {
+                    return magic_buffer_info('Hello, World!');
+                }
+            ", "interrupt_func_buffer_info_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_func");
+        }
+
+        # Test magic_buffer_mime_type() is interrupted
+        {
+            Program p(PO_MODERN);
+            p.loadModule("magic");
+            p.parse("
+                string sub test_func() {
+                    return magic_buffer_mime_type('Hello, World!');
+                }
+            ", "interrupt_func_buffer_mime_type_test");
+            p.setSandboxManager(sm);
+
+            assertThrows("PROGRAM-INTERRUPTED", \p.callFunction(), "test_func");
+        }
     }
 }
