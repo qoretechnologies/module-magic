@@ -315,7 +315,7 @@ AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, int flags, Exc
     AutoLocker al(m_lock);
 
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -352,7 +352,7 @@ AbstractQoreNode* QoreMagic::buffer(QoreValue data, int flags, ExceptionSink* xs
     AutoLocker al(m_lock);
 
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -384,7 +384,7 @@ QoreHashNode* QoreMagic::fileInfo(const QoreStringNode* fileName, ExceptionSink*
     AutoLocker al(m_lock);
 
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -401,7 +401,7 @@ QoreHashNode* QoreMagic::bufferInfo(QoreValue data, ExceptionSink* xsink) {
     AutoLocker al(m_lock);
 
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -418,7 +418,7 @@ QoreHashNode* QoreMagic::bufferInfo(QoreValue data, ExceptionSink* xsink) {
 
 QoreHashNode* magic_file_info_impl(const QoreStringNode* fileName, ExceptionSink* xsink) {
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -433,7 +433,7 @@ QoreHashNode* magic_file_info_impl(const QoreStringNode* fileName, ExceptionSink
 
 QoreStringNode* magic_mime_type_impl(const QoreStringNode* fileName, ExceptionSink* xsink) {
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -462,7 +462,7 @@ QoreStringNode* magic_mime_type_impl(const QoreStringNode* fileName, ExceptionSi
 
 QoreHashNode* magic_buffer_info_impl(QoreValue data, ExceptionSink* xsink) {
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
@@ -477,7 +477,7 @@ QoreHashNode* magic_buffer_info_impl(QoreValue data, ExceptionSink* xsink) {
 
 QoreStringNode* magic_buffer_mime_type_impl(QoreValue data, ExceptionSink* xsink) {
     // Check for I/O interrupt before starting
-    if (qore_check_io_interrupt(xsink)) {
+    if (qore_check_cancel(xsink)) {
         return nullptr;
     }
 
