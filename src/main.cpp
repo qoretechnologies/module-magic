@@ -119,14 +119,7 @@ hash<MagicFileInfo> buf_info = magic_buffer_info("Hello, World!");
 string buf_mime = magic_buffer_mime_type("<html><body>Test</body></html>");
 @endcode
 
-    @subsection magic_2_0_0 magic Module Version 2.0.0
-    - added @ref Qore::Magic::MagicFileInfo "MagicFileInfo" hashdecl for structured file type information
-    - added @ref Qore::Magic::Magic::fileInfo() "Magic::fileInfo()" and @ref Qore::Magic::Magic::bufferInfo() "Magic::bufferInfo()" methods
-    - added convenience functions: @ref Qore::Magic::magic_file_info() "magic_file_info()", @ref Qore::Magic::magic_mime_type() "magic_mime_type()", @ref Qore::Magic::magic_buffer_info() "magic_buffer_info()", @ref Qore::Magic::magic_buffer_mime_type() "magic_buffer_mime_type()"
+@section magicreleasenotes_link Release Notes
 
-    @subsection magic_1_0_1 magic Module Version 1.0.1
-    - aligned release with qpp from %Qore
-
-    @subsection magic_1_0_0 magic Module Version 1.0.0
-    - initial release
+See @subpage magicreleasenotes for release notes and version history.
 */

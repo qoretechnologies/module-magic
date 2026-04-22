@@ -51,14 +51,27 @@ endif()
 
 add_library(${module_name} MODULE ${CPP_SRC} ${QPP_SOURCES})
 
-set(MODULE_DOX_INPUT ${CMAKE_SOURCE_DIR}/src/main.cpp ${QPP_DOX})
-string(REPLACE ";" " " MODULE_DOX_INPUT "${MODULE_DOX_INPUT}")
+set(QORE_DOX_TMPL_SRC
+    docs/release-notes.doxygen.tmpl
+)
 
 if (DEFINED ENV{DOXYGEN_EXECUTABLE})
     set(DOXYGEN_EXECUTABLE $ENV{DOXYGEN_EXECUTABLE})
 endif()
 
+if (DOXYGEN_FOUND)
+    qore_wrap_dox(QORE_DOX_SRC ${QORE_DOX_TMPL_SRC})
+endif()
+
+set(MODULE_DOX_INPUT ${CMAKE_SOURCE_DIR}/src/main.cpp ${QPP_DOX} ${QORE_DOX_SRC})
+string(REPLACE ";" " " MODULE_DOX_INPUT "${MODULE_DOX_INPUT}")
+
 qore_external_binary_module(${module_name} "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" ${LIBMAGIC_LIBRARY} ${_XTRA_LIBS})
+
+if (DOXYGEN_FOUND)
+    add_custom_target(QORE_MOD_DOX_FILES DEPENDS ${QORE_DOX_SRC})
+    add_dependencies(docs-module QORE_MOD_DOX_FILES)
+endif()
 
 qore_dist("${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
