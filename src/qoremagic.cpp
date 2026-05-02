@@ -89,16 +89,22 @@ public:
 // Extracts buffer pointer and length from a QoreValue (string or binary).
 // Returns false and raises an exception on invalid type.
 static bool extractBufferData(QoreValue data, const char* func_name, const void*& buf, size_t& len,
-        ExceptionSink* xsink) {
+        char short_string_buf[7], ExceptionSink* xsink) {
     qore_type_t qt = data.getType();
     if (qt == NT_BINARY) {
         const BinaryNode* s = data.get<const BinaryNode>();
         buf = s->getPtr();
         len = s->size();
     } else if (qt == NT_STRING) {
-        const QoreStringNode* s = data.get<const QoreStringNode>();
-        buf = s->c_str();
-        len = s->size();
+        if (data.isShortString()) {
+            len = data.shortStringLen();
+            data.getShortString(short_string_buf);
+            buf = short_string_buf;
+        } else {
+            const QoreStringNode* s = data.get<const QoreStringNode>();
+            buf = s->c_str();
+            len = s->size();
+        }
     } else {
         xsink->raiseException("MAGIC-ERROR",
             "%s requires 'data' argument: string or binary. Got: %s",
@@ -358,7 +364,8 @@ AbstractQoreNode* QoreMagic::buffer(QoreValue data, int flags, ExceptionSink* xs
 
     const void* buf;
     size_t len;
-    if (!extractBufferData(data, "Magic::buffer", buf, len, xsink)) {
+    char short_string_buf[7];
+    if (!extractBufferData(data, "Magic::buffer", buf, len, short_string_buf, xsink)) {
         return nullptr;
     }
 
@@ -407,7 +414,8 @@ QoreHashNode* QoreMagic::bufferInfo(QoreValue data, ExceptionSink* xsink) {
 
     const void* buf;
     size_t len;
-    if (!extractBufferData(data, "Magic::bufferInfo", buf, len, xsink)) {
+    char short_string_buf[7];
+    if (!extractBufferData(data, "Magic::bufferInfo", buf, len, short_string_buf, xsink)) {
         return nullptr;
     }
 
@@ -468,7 +476,8 @@ QoreHashNode* magic_buffer_info_impl(QoreValue data, ExceptionSink* xsink) {
 
     const void* buf;
     size_t len;
-    if (!extractBufferData(data, "magic_buffer_info()", buf, len, xsink)) {
+    char short_string_buf[7];
+    if (!extractBufferData(data, "magic_buffer_info()", buf, len, short_string_buf, xsink)) {
         return nullptr;
     }
 
@@ -483,7 +492,8 @@ QoreStringNode* magic_buffer_mime_type_impl(QoreValue data, ExceptionSink* xsink
 
     const void* buf;
     size_t len;
-    if (!extractBufferData(data, "magic_buffer_mime_type()", buf, len, xsink)) {
+    char short_string_buf[7];
+    if (!extractBufferData(data, "magic_buffer_mime_type()", buf, len, short_string_buf, xsink)) {
         return nullptr;
     }
 
