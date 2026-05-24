@@ -120,14 +120,14 @@ Magic::constructor() {
 //! Constructs specialized instance
 /** @param flags features set based on @ref magic_constants
  */
-Magic::constructor(softint flags) {
+Magic::constructor(softint flags) [flags=NAMED_ARGS] {
     self->setPrivate(CID_MAGIC, new QoreMagic((int)flags, xsink));
 }
 
 //! Resets new flags/features based on @ref magic_constants
 /** @param flags New flags to replace old settings.
 */
-Magic::setFlags(softint flags) {
+Magic::setFlags(softint flags) [flags=NAMED_ARGS] {
     priv->setFlags(flags, xsink);
 }
 
@@ -139,27 +139,27 @@ int Magic::getFlags() {
 }
 
 //! Returns magic info for a file (path)
-/** @param fileName a path to file to be examined
+/** @param path a path to file to be examined
     @retval string a text with requested info
 */
-string Magic::file(softstring fileName) [dom=FILESYSTEM] {
-    return priv->file(fileName, xsink);
+string Magic::file(softstring path) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return priv->file(path, xsink);
 }
 
 //! Returns magic info for a file (path)
-/** @param fileName a path to file to be examined
+/** @param path a path to file to be examined
     @param flags settings flags
     @retval string a text with requested info
 */
-string Magic::file(softstring fileName, softint flags) [dom=FILESYSTEM] {
-    return priv->file(fileName, flags, xsink);
+string Magic::file(softstring path, softint flags) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return priv->file(path, flags, xsink);
 }
 
 //! Returns magic info for a data buffer
 /** @param data a data to file to be examined
     @retval string a text with requested info
 */
-string Magic::buffer(data data) [dom=FILESYSTEM] {
+string Magic::buffer(data data) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     return priv->buffer(data, xsink);
 }
 
@@ -168,12 +168,12 @@ string Magic::buffer(data data) [dom=FILESYSTEM] {
     @param flags settings flags
     @retval string a text with requested info
 */
-string Magic::buffer(data data, softint flags) [dom=FILESYSTEM] {
+string Magic::buffer(data data, softint flags) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     return priv->buffer(data, flags, xsink);
 }
 
 //! Returns structured file information including MIME type, encoding, and description
-/** @param fileName a path to file to be examined
+/** @param path a path to file to be examined
 
     @return a @ref MagicFileInfo hash with all file information
 
@@ -186,8 +186,8 @@ printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encodi
 
     @since magic 2.0
 */
-hash<MagicFileInfo> Magic::fileInfo(softstring fileName) [dom=FILESYSTEM] {
-    return priv->fileInfo(fileName, xsink);
+hash<MagicFileInfo> Magic::fileInfo(softstring path) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return priv->fileInfo(path, xsink);
 }
 
 //! Returns structured buffer information including MIME type, encoding, and description
@@ -204,6 +204,6 @@ printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encodi
 
     @since magic 2.0
 */
-hash<MagicFileInfo> Magic::bufferInfo(data data) [dom=FILESYSTEM] {
+hash<MagicFileInfo> Magic::bufferInfo(data data) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     return priv->bufferInfo(data, xsink);
 }

@@ -54,6 +54,7 @@ class MagicTest inherits Test {
         addTestCase("I/O interrupt - file operations", \testIOInterruptFile());
         addTestCase("I/O interrupt - buffer operations", \testIOInterruptBuffer());
         addTestCase("I/O interrupt - convenience functions", \testIOInterruptConvenience());
+        addTestCase("Named argument calls", \testNamedArgumentCalls());
 
         set_return_value(main());
     }
@@ -198,6 +199,29 @@ class MagicTest inherits Test {
         m.setFlags(MAGIC_MIME | MAGIC_COMPRESS);
         int expected = MAGIC_MIME | MAGIC_COMPRESS;
         assertEq(expected, m.getFlags(), "getFlags should return combined flags");
+    }
+
+    testNamedArgumentCalls() {
+        string text_path = testDir + "/qore.txt";
+
+        Magic m(flags: MAGIC_MIME_TYPE);
+        assertEq(MimeTypeText, m.file(path: text_path), "named file path should work");
+        assertEq(MimeTypeText, m.file(path: text_path, flags: MAGIC_MIME_TYPE),
+            "named file path and flags should work");
+        assertEq(MimeTypeText, m.buffer(data: "Hello, World!"), "named buffer data should work");
+        assertEq(MimeTypeText, m.buffer(data: "Hello, World!", flags: MAGIC_MIME_TYPE),
+            "named buffer data and flags should work");
+
+        m.setFlags(flags: MAGIC_MIME);
+        assertTrue(m.file(path: text_path).regex("charset="), "named setFlags should update flags");
+
+        assertEq(MimeTypeText, magic_mime_type(path: text_path), "named convenience path should work");
+        assertEq(MimeTypeText, magic_buffer_mime_type(data: "Hello, World!"),
+            "named convenience data should work");
+        hash<MagicFileInfo> file_info = magic_file_info(path: text_path);
+        assertEq(MimeTypeText, file_info.mime_type, "named magic_file_info should work");
+        hash<MagicFileInfo> buffer_info = magic_buffer_info(data: "Hello, World!");
+        assertEq(MimeTypeText, buffer_info.mime_type, "named magic_buffer_info should work");
     }
 
     # Test error handling for non-existent file
