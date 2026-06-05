@@ -42,7 +42,7 @@ hash<MagicFileInfo> info = magic_file_info("/etc/hosts");
 printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encoding, info.is_text);
     @endcode
 
-    @param fileName a path to the file to be examined
+    @param path a path to the file to be examined
 
     @return a @ref MagicFileInfo hash with comprehensive file type information
 
@@ -51,8 +51,8 @@ printf("MIME: %s, encoding: %s, is_text: %y\n", info.mime_type, info.mime_encodi
 
     @since magic 2.0
 */
-hash<MagicFileInfo> magic_file_info(string fileName) [dom=FILESYSTEM] {
-    return magic_file_info_impl(fileName, xsink);
+hash<MagicFileInfo> magic_file_info(string path) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return magic_file_info_impl(path, xsink);
 }
 
 //! Returns the MIME type of a file as a string
@@ -62,7 +62,7 @@ string mime = magic_mime_type("/etc/hosts");
 # mime = "text/plain"
     @endcode
 
-    @param fileName a path to the file to be examined
+    @param path a path to the file to be examined
 
     @return the MIME type string (e.g. "text/plain", "image/png")
 
@@ -71,8 +71,8 @@ string mime = magic_mime_type("/etc/hosts");
 
     @since magic 2.0
 */
-string magic_mime_type(string fileName) [dom=FILESYSTEM] {
-    return magic_mime_type_impl(fileName, xsink);
+string magic_mime_type(string path) [dom=FILESYSTEM;flags=NAMED_ARGS] {
+    return magic_mime_type_impl(path, xsink);
 }
 
 //! Returns structured information for a data buffer including MIME type, encoding, and description
@@ -90,7 +90,7 @@ printf("MIME: %s, is_text: %y\n", info.mime_type, info.is_text);
 
     @since magic 2.0
 */
-hash<MagicFileInfo> magic_buffer_info(data data) [dom=FILESYSTEM] {
+hash<MagicFileInfo> magic_buffer_info(data data) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     return magic_buffer_info_impl(data, xsink);
 }
 
@@ -109,7 +109,7 @@ string mime = magic_buffer_mime_type("Hello, World!");
 
     @since magic 2.0
 */
-string magic_buffer_mime_type(data data) [dom=FILESYSTEM] {
+string magic_buffer_mime_type(data data) [dom=FILESYSTEM;flags=NAMED_ARGS] {
     return magic_buffer_mime_type_impl(data, xsink);
 }
 ///@}
