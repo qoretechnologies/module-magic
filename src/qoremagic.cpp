@@ -101,6 +101,7 @@ static bool extractBufferData(QoreValue data, const char* func_name, const void*
             data.getShortString(short_string_buf);
             buf = short_string_buf;
         } else {
+            // note: safe; inline short strings are handled above
             const QoreStringNode* s = data.get<const QoreStringNode>();
             buf = s->c_str();
             len = s->size();
