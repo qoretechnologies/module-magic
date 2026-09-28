@@ -1,0 +1,6 @@
+qore-magic-module (2.0.0~git20260928.1-0qore1~ubuntu26.04) resolute; urgency=medium
+
+  * Package the native module, compiler metadata, docs and debug symbols.
+  * Check file detection and installed runtime/compiler integration.
+
+ -- David Nichols <david@qore.org>  Mon, 28 Sep 2026 20:58:41 -0000

@@ -4,3 +4,13 @@
 # ignore	cmake builds
 build/
 build-*/
+
+# Debian package build output
+obj-*/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/qore-magic-module/
+debian/qore-magic-module-doc/
+debian/tmp/

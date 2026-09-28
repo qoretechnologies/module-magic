@@ -1,0 +1,18 @@
+#!/bin/sh
+# Copyright (C) 2026 David Nichols
+# SPDX-License-Identifier: MIT
+set -eu
+unset QORE_MODULE_DIR QORE_MODULE_DIR_ONLY QORE_INCLUDE_DIR LD_LIBRARY_PATH LD_PRELOAD
+cd "$AUTOPKGTEST_TMP"
+cat > magic-smoke.q <<'EOF'
+%modern
+%requires magic
+Magic detector(flags: MAGIC_MIME_TYPE);
+hash<MagicFileInfo> info = magic_buffer_info(data: "package detection test\n");
+if (detector.buffer(data: "package detection test\n") != "text/plain"
+        || info.mime_type != "text/plain") {
+    exit(1);
+}
+EOF
+/usr/bin/qcc -o magic-smoke magic-smoke.q
+./magic-smoke

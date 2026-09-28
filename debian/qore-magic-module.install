@@ -1,0 +1,2 @@
+usr/lib/*/qore-modules/magic-api-*.qmod
+usr/share/qore/metadata/magic/*.meta.json

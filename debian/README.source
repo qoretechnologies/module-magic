@@ -1,0 +1,69 @@
+Debian/Ubuntu packaging for the magic module
+=============================================
+
+The native module and qpp compiler metadata belong to qore-magic-module.
+HTML documentation and the upstream example test belong to the optional
+qore-magic-module-doc package. Debhelper creates matching debug symbols.
+
+Build prerequisites and supported scope
+--------------------------------------
+
+Use an isolated native build environment containing the packaged Qore runtime
+and libqore-dev, then install the Build-Depends from debian/control. The current
+qualification target is Ubuntu 26.04 amd64 with Qore 3.0 development packages.
+Other Debian/Ubuntu releases and architectures need their own qualified SDK
+and native build/test run. Cross builds are rejected because qpp and Qore
+execute during compilation. The system libmagic-dev package is required. The generated runtime dependency
+on libmagic also brings in its matching libmagic-mgc file-type database, even
+with --no-install-recommends. No private libmagic or database copy is bundled.
+
+The build uses distribution compiler/hardening flags. Native Qore modules
+resolve Qore symbols at load time without linking libqore. debian/rules derives
+a minimum runtime and libqore SONAME package dependency from the installed SDK;
+dh_shlibdeps supplies other shared-library dependencies. The runtime package is
+not Multi-Arch: same because it requires the native Qore interpreter and
+includes shared compiler metadata. There are no AOT user modules or Qore
+dependency trailers in this module; ordinary dh_strip is appropriate.
+
+Source and binary builds
+------------------------
+
+Use a fresh version for every changed upload. This snapshot precedes the 2.0.0
+release. From a clean committed checkout:
+
+    version=2.0.0~git20260928.1
+    mkdir -p ../magic-package-work
+    git archive --format=tar --prefix="qore-magic-module-$version/" \
+        HEAD -- . ':!debian' | xz > \
+        "../magic-package-work/qore-magic-module_$version.orig.tar.xz"
+    tar -xf "../magic-package-work/qore-magic-module_$version.orig.tar.xz" \
+        -C ../magic-package-work
+    cp -a debian "../magic-package-work/qore-magic-module-$version/"
+    cd "../magic-package-work/qore-magic-module-$version"
+    dpkg-buildpackage -S -us -uc
+
+Extract the .dsc with dpkg-source -x into a clean directory. With dependencies
+preinstalled, build as an unprivileged user with networking disabled:
+
+    dpkg-buildpackage -b -us -uc
+
+Architecture-only builds (-B) do not need Doxygen; architecture-independent
+builds (-A) produce documentation. Both DEB_BUILD_OPTIONS=nodoc and
+DEB_BUILD_PROFILES=nodoc suppress documentation; the profile also omits the doc
+package. Do not use nocheck for qualification.
+
+Qualification and publication
+-----------------------------
+
+The upstream magic suite runs against the new module during the build,
+including file/buffer detection, invalid inputs, sandbox and cancellation checks.
+Installed autopkgtests run the same suite and supplied PNG/JPEG/text fixtures
+away from the build tree, then use the installed SDK and metadata to compile
+and run named Magic constructor, buffer and convenience-function calls with
+a typed MagicFileInfo result. No external service or optional module is needed.
+
+Check source/binary Lintian, detached debug symbols and hardening, installation
+without libqore-dev, documentation/debug coinstallation, dpkg -V, purge/reinstall,
+and reproducibility from two distinct build directories. Retain the exact source
+commit, source/package hashes, dependency versions and logs. Publishing to the
+testing PPA is separate from approval for a final general release.
