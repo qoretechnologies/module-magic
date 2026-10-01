@@ -78,10 +78,10 @@ const MAGIC_NO_CHECK_ENCODING = 0x200000;
 const MAGIC_NO_CHECK_BUILTIN  = 0x3fb000;
 ///@}
 
-//! Structured file information returned by @ref Magic::fileInfo() "Magic::fileInfo()", @ref Magic::bufferInfo() "Magic::bufferInfo()", and convenience functions
+//! Structured file information returned by @ref Qore::Magic::Magic::fileInfo() "Magic::fileInfo()", @ref Qore::Magic::Magic::bufferInfo() "Magic::bufferInfo()", and convenience functions
 /** @since magic 2.0
 */
-hashdecl MagicFileInfo {
+hashdecl Qore::Magic::MagicFileInfo {
     //! Human-readable description (e.g. "PNG image data, 800 x 600, 8-bit/color RGBA")
     string description;
     //! MIME type (e.g. "image/png")
