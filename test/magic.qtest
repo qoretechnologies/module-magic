@@ -144,12 +144,11 @@ class MagicTest inherits Test {
         string jpegResult = m.buffer(jpgData);
         assertEq(MimeTypeJpeg, jpegResult, "Should detect JPEG from binary buffer");
 
-        # Test with minimal magic bytes - these may return octet-stream on some systems
-        # as the headers alone may not be enough for definitive detection
-        binary pngHeader = <89504E470D0A1A0A>;
-        string pngHeaderResult = m.buffer(pngHeader);
-        assertTrue(pngHeaderResult == MimeTypePng || pngHeaderResult == "application/octet-stream",
-            "Should detect PNG or octet-stream from minimal header");
+        # the minimal start of a PNG file: the signature and the IHDR chunk header that every PNG file starts with;
+        # libmagic does not recognize the signature alone as PNG (5.46 reports application/octet-stream, 5.48
+        # text/plain), so the IHDR chunk header is included to make the detection independent of the libmagic version
+        binary pngHeader = <89504E470D0A1A0A0000000D49484452>;
+        assertEq(MimeTypePng, m.buffer(pngHeader), "Should detect PNG from the signature and the IHDR chunk header");
 
         # PDF-like content (header string)
         string pdfResult = m.buffer("%PDF-1.4");
