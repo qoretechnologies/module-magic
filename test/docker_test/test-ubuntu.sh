@@ -45,6 +45,14 @@ export QORE_MODULE_DIR=${MODULE_SRC_DIR}/qlib:${QORE_MODULE_DIR}
 cd ${MODULE_SRC_DIR}
 
 echo && echo "-- running tests --"
+# the tests must load the module that this job built and installed, not one that the image already has
+loaded=$(gosu qore:qore qore -l magic -e 'printf("%s", get_module_hash().magic.filename);')
+if ! grep -qxF "${loaded}" ${MODULE_SRC_DIR}/build/install_manifest.txt; then
+    echo "ERROR: the tests would load '${loaded}', which this job did not install" >&2
+    exit 1
+fi
+echo "-- the tests load ${loaded}"
+
 gosu qore:qore qore --enable-debug -l ${MODULE_SRC_DIR}/build/magic-api-*.qmod test/magic.qtest -vv
 
 echo && echo "-- all tests passed --"
