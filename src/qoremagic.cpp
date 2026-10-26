@@ -327,7 +327,7 @@ AbstractQoreNode* QoreMagic::file(const QoreStringNode* fileName, int flags, Exc
     }
 
     // Check filesystem sandbox access before reading file
-    QoreSandboxManagerHelper smh;
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh && !smh->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }
@@ -397,7 +397,7 @@ QoreHashNode* QoreMagic::fileInfo(const QoreStringNode* fileName, ExceptionSink*
     }
 
     // Check filesystem sandbox access before reading file
-    QoreSandboxManagerHelper smh;
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh && !smh->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }
@@ -432,7 +432,7 @@ QoreHashNode* magic_file_info_impl(const QoreStringNode* fileName, ExceptionSink
     }
 
     // Check filesystem sandbox access
-    QoreSandboxManagerHelper smh;
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh && !smh->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }
@@ -447,7 +447,7 @@ QoreStringNode* magic_mime_type_impl(const QoreStringNode* fileName, ExceptionSi
     }
 
     // Check filesystem sandbox access
-    QoreSandboxManagerHelper smh;
+    QoreSandboxManagerHelper smh(QoreSandboxManagerHelper::Policy);
     if (smh && !smh->checkFilesystemAccess(fileName->c_str(), QSEC_READ, xsink)) {
         return nullptr;
     }

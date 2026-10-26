@@ -343,6 +343,9 @@ class MagicTest inherits Test {
                 Magic m(MAGIC_MIME_TYPE);
                 return m.file('%s');
             }
+            string sub through(code c) {
+                return c();
+            }
         ", testFilePath), "sandbox_magic_test");
 
         SandboxManager sm();
@@ -358,6 +361,19 @@ class MagicTest inherits Test {
             assertEq("FILESYSTEM-ACCESS-DENIED", ex.err, "Magic file access blocked with correct error");
         }
         assertTrue(caught, "Magic file access outside sandbox was blocked");
+
+        # a system-policy capability called from the sandbox is subject to the system policy, not the sandbox's
+        code capability = SandboxManager::createSystemPolicyCall(string sub () {
+            Magic m(MAGIC_MIME_TYPE);
+            return m.file(testFilePath);
+        });
+        assertEq("text/plain", p.callFunction("through", capability),
+            "Magic::file() runs in a system-policy capability called from the sandbox");
+        # the same code called directly from the sandbox inherits the sandbox's policy
+        assertThrows("FILESYSTEM-ACCESS-DENIED", \p.callFunction(), ("through", string sub () {
+            Magic m(MAGIC_MIME_TYPE);
+            return m.file(testFilePath);
+        }), "the same code called directly from the sandbox is denied");
 
         # Test that buffer detection works with any sandbox (no file access)
         Program p2(PO_MODERN);
