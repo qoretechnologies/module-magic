@@ -24,6 +24,8 @@
 
 \tableofcontents
 
+@section magicintro magic Module Introduction
+
 This is a module for recognizing the type of data contained in a computer
 file using so called magic numbers. It is a wrapper around <a href="http://darwinsys.com/file/">\c libmagic C
 library</a> (covered by the standard Berkeley Software Distribution copyright).
@@ -119,7 +121,7 @@ hash<MagicFileInfo> buf_info = magic_buffer_info("Hello, World!");
 string buf_mime = magic_buffer_mime_type("<html><body>Test</body></html>");
 @endcode
 
-@section magicreleasenotes_link Release Notes
+@anchor magicreleasenotes_link
 
 See @subpage magicreleasenotes for release notes and version history.
 */
